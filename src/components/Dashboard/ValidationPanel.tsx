@@ -32,14 +32,14 @@ export function ValidationPanel({
 
   // Filter predictions that exceed thresholds (these are considered unusual)
   const unusualPredictions = predictions.filter(p => 
-    Math.abs(p.orderVariance) > orderVarianceThreshold[0] || 
-    Math.abs(p.revenueVariance) > revenueVarianceThreshold[0]
+    Math.abs(Number(p.orderVariance) || 0) > orderVarianceThreshold[0] || 
+    Math.abs(Number(p.revenueVariance) || 0) > revenueVarianceThreshold[0]
   );
 
   // Normal predictions (within thresholds) should be automatically validated
   const normalPredictions = predictions.filter(p => 
-    Math.abs(p.orderVariance) <= orderVarianceThreshold[0] && 
-    Math.abs(p.revenueVariance) <= revenueVarianceThreshold[0]
+    Math.abs(Number(p.orderVariance) || 0) <= orderVarianceThreshold[0] && 
+    Math.abs(Number(p.revenueVariance) || 0) <= revenueVarianceThreshold[0]
   );
 
   // Update validated restaurants whenever thresholds change
@@ -60,12 +60,15 @@ export function ValidationPanel({
   // Variance comparison data for chart
   const varianceData = predictions.slice(0, 20).map(p => {
     const restaurant = restaurantMap.get(p.restaurantId);
+    const orderVar = Number(p.orderVariance) || 0;
+    const revenueVar = Number(p.revenueVariance) || 0;
+    
     return {
       name: restaurant?.name.split(' ')[0] || 'Unknown',
-      orderVariance: p.orderVariance,
-      revenueVariance: p.revenueVariance / 10, // Scale down for better visualization
-      isUnusual: Math.abs(p.orderVariance) > orderVarianceThreshold[0] || 
-                Math.abs(p.revenueVariance) > revenueVarianceThreshold[0]
+      orderVariance: orderVar,
+      revenueVariance: revenueVar / 10, // Scale down for better visualization
+      isUnusual: Math.abs(orderVar) > orderVarianceThreshold[0] || 
+                Math.abs(revenueVar) > revenueVarianceThreshold[0]
     };
   });
 
@@ -96,8 +99,11 @@ export function ValidationPanel({
   };
 
   const getVarianceBadge = (orderVariance: number, revenueVariance: number) => {
-    const isOrderUnusual = Math.abs(orderVariance) > orderVarianceThreshold[0];
-    const isRevenueUnusual = Math.abs(revenueVariance) > revenueVarianceThreshold[0];
+    const orderVar = Number(orderVariance) || 0;
+    const revenueVar = Number(revenueVariance) || 0;
+    
+    const isOrderUnusual = Math.abs(orderVar) > orderVarianceThreshold[0];
+    const isRevenueUnusual = Math.abs(revenueVar) > revenueVarianceThreshold[0];
     
     if (isOrderUnusual && isRevenueUnusual) {
       return <Badge variant="destructive">High Variance</Badge>;
@@ -185,8 +191,8 @@ export function ValidationPanel({
               <YAxis />
               <Tooltip 
                 formatter={(value, name) => [
-                  name === 'orderVariance' ? `${value} orders` : `GHS ${value * 10}`,
-                  name === 'orderVariance' ? 'Order Variance' : 'Revenue Variance'
+                  name === 'orderVariance' ? `${value} orders` : `GHS ${Number(value) * 10}`,
+                  name === 'orderVariance' ? 'Order Variance' : 'Revenue Variance (÷10)'
                 ]}
               />
               <Bar dataKey="orderVariance" fill="#3b82f6" name="Order Variance" />
@@ -237,6 +243,8 @@ export function ValidationPanel({
                 if (!restaurant) return null;
                 
                 const isValidated = validatedRestaurants.has(prediction.restaurantId);
+                const orderVar = Number(prediction.orderVariance) || 0;
+                const revenueVar = Number(prediction.revenueVariance) || 0;
                 
                 return (
                   <div
@@ -262,7 +270,7 @@ export function ValidationPanel({
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        {getVarianceBadge(prediction.orderVariance, prediction.revenueVariance)}
+                        {getVarianceBadge(orderVar, revenueVar)}
                         {!isValidated && (
                           <Badge variant="outline" className="bg-orange-50 text-orange-700">
                             Needs Review
@@ -282,14 +290,14 @@ export function ValidationPanel({
                       </div>
                       <div>
                         <p className="text-gray-500">Order Variance</p>
-                        <p className={`font-medium ${prediction.orderVariance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {prediction.orderVariance >= 0 ? '+' : ''}{prediction.orderVariance}
+                        <p className={`font-medium ${orderVar >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {orderVar >= 0 ? '+' : ''}{orderVar}
                         </p>
                       </div>
                       <div>
                         <p className="text-gray-500">Revenue Variance</p>
-                        <p className={`font-medium ${prediction.revenueVariance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {prediction.revenueVariance >= 0 ? '+' : ''}GHS {prediction.revenueVariance}
+                        <p className={`font-medium ${revenueVar >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {revenueVar >= 0 ? '+' : ''}GHS {revenueVar}
                         </p>
                       </div>
                     </div>
