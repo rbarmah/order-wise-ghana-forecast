@@ -1,8 +1,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Target, DollarSign, MapPin, Phone, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TrendingUp, Target, DollarSign, MapPin, Phone, Clock, Filter } from "lucide-react";
 import { PredictionData, Restaurant } from "@/utils/dummyData";
+import { useState } from "react";
 
 interface MLPredictionPanelProps {
   predictions: PredictionData[];
@@ -10,12 +12,31 @@ interface MLPredictionPanelProps {
 }
 
 export function MLPredictionPanel({ predictions, restaurants }: MLPredictionPanelProps) {
+  const [riskFilter, setRiskFilter] = useState<string>("all");
+  const [revenueFilter, setRevenueFilter] = useState<string>("all");
+
   // Create restaurant lookup
   const restaurantMap = new Map(restaurants.map(r => [r.id, r]));
 
-  const totalPredicted = predictions.reduce((sum, p) => sum + p.predictedOrders, 0);
-  const totalExpected = predictions.reduce((sum, p) => sum + p.expectedRevenue, 0);
-  const totalPotential = predictions.reduce((sum, p) => sum + p.potentialRevenue, 0);
+  // Filter predictions based on selected filters
+  const filteredPredictions = predictions.filter((prediction) => {
+    const restaurant = restaurantMap.get(prediction.restaurantId);
+    if (!restaurant) return false;
+
+    // Risk filter
+    if (riskFilter !== "all" && prediction.riskLevel !== riskFilter) {
+      return false;
+    }
+
+    // Revenue filter
+    if (revenueFilter !== "all") {
+      if (revenueFilter === "low" && prediction.expectedRevenue >= 500) return false;
+      if (revenueFilter === "medium" && (prediction.expectedRevenue < 500 || prediction.expectedRevenue >= 1000)) return false;
+      if (revenueFilter === "high" && prediction.expectedRevenue < 1000) return false;
+    }
+
+    return true;
+  });
 
   const handleCardClick = (restaurantId: string) => {
     console.log(`Clicked on restaurant: ${restaurantId}`);
@@ -49,63 +70,53 @@ export function MLPredictionPanel({ predictions, restaurants }: MLPredictionPane
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">
-              Daily Predicted Orders
-            </CardTitle>
-            <Target className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{totalPredicted.toLocaleString()}</div>
-            <p className="text-xs text-blue-600 mt-1">
-              +12.3% vs last week
-            </p>
-          </CardContent>
-        </Card>
+      {/* Filters */}
+      <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">Filters:</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Risk Level:</span>
+          <Select value={riskFilter} onValueChange={setRiskFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="high">High Risk</SelectItem>
+              <SelectItem value="medium">Medium Risk</SelectItem>
+              <SelectItem value="low">Low Risk</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">
-              Expected Revenue
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">
-              GHS {totalExpected.toLocaleString()}
-            </div>
-            <p className="text-xs text-green-600 mt-1">
-              Adjusted for cancellations
-            </p>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Revenue Range:</span>
+          <Select value={revenueFilter} onValueChange={setRevenueFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="low">< GHS 500</SelectItem>
+              <SelectItem value="medium">GHS 500-1000</SelectItem>
+              <SelectItem value="high">> GHS 1000</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700">
-              Potential Revenue
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900">
-              GHS {totalPotential.toLocaleString()}
-            </div>
-            <p className="text-xs text-purple-600 mt-1">
-              100% fulfillment scenario
-            </p>
-          </CardContent>
-        </Card>
+        <div className="text-sm text-gray-500">
+          Showing {filteredPredictions.length} of {predictions.length} retailers
+        </div>
       </div>
 
       {/* Retailer Prediction Cards */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900">Retailer ML Predictions ({predictions.length})</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Retailer ML Predictions ({filteredPredictions.length})</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-          {predictions.map((prediction) => {
+          {filteredPredictions.map((prediction) => {
             const restaurant = restaurantMap.get(prediction.restaurantId);
             if (!restaurant) return null;
 
@@ -136,7 +147,7 @@ export function MLPredictionPanel({ predictions, restaurants }: MLPredictionPane
                       <p className="font-medium text-gray-700">{restaurant.avgDailyOrders}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">ML Prediction</p>
+                      <p className="text-gray-500 text-xs">Predicted Order Volume</p>
                       <p className="font-medium text-blue-600">{prediction.predictedOrders}</p>
                     </div>
                   </div>
