@@ -35,17 +35,13 @@ export interface PredictionData {
     upper: number;
   };
   riskLevel: 'low' | 'medium' | 'high';
+  orderVariance: number; // prediction - historical average
+  revenueVariance: number; // prediction - historical average
 }
 
 const ghanaZones = [
   'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern', 
   'Northern', 'Upper East', 'Upper West', 'Volta', 'Brong Ahafo'
-];
-
-const restaurantTypes = [
-  'Waakye Spot', 'Chop Bar', 'Barbeque Joint', 'Local Kitchen', 
-  'Fast Food', 'Jollof House', 'Banku Bar', 'Rice & Stew', 
-  'Kelewele Corner', 'Fried Rice Hub'
 ];
 
 const ghanaFoods = [
@@ -63,13 +59,76 @@ const ghanaLocations = [
   'Winneba', 'Kasoa', 'Madina', 'Teshie', 'Ashaiman'
 ];
 
-function generateRandomName(): string {
-  const prefixes = ['Mama', 'Auntie', 'Uncle', 'Sister', 'Brother'];
-  const names = ['Akosua', 'Kwame', 'Ama', 'Kofi', 'Efua', 'Yaw', 'Adwoa', 'Kwaku'];
-  const suffixes = ['Kitchen', 'Spot', 'Place', 'Joint', 'Corner', 'House'];
-  
-  return `${prefixes[Math.floor(Math.random() * prefixes.length)]} ${names[Math.floor(Math.random() * names.length)]}'s ${restaurantTypes[Math.floor(Math.random() * restaurantTypes.length)]}`;
-}
+// Real retailer names from the provided data
+const realRetailerNames = [
+  'Tasty Queen', 'KFC', 'Pizzaman Chickenman', 'Papaye Fast Food', 'ADB Gob3',
+  'Atta Barima', 'Pice Restaurant', 'Obaa Gifty Waakye', 'Barbeque City',
+  'Mango Down Waakye', 'Hajia Sauda Restaurant', 'Waakye Abrantie', 'MJ\'s Cuisine',
+  'Betty\'s Kitchen', 'Haatso Waakye (Hajia Rahi)', 'Fatawu Bicycle, Nyohani Round About',
+  'Harry\'s Kitchen', 'Abura GRA Gobe', 'Adiza Waakye Special', 'KFC Kasoa',
+  'Starbites', 'KFC Haatso', 'Tasty Chef', 'KFC Dome', 'Capital View Hotel',
+  'KFC Adenta', 'Ayewamu By Jane', 'Vapiano Foods', 'Alhaji\'s Wife Waakye',
+  'KFC Dansoman', 'KFC Osu', 'Eno Special', 'Jays Cafe', 'God Is Love Chopbar',
+  'KFC Sakumono', 'KFC Weija', 'Kinis Kitchen', 'Pipe Ano Insha Allah Waakye',
+  'Blue Lagoon Junction Waakye (Aj & Rams)', 'Queens Hall Gob3', 'Nuamah\'s Kitchen',
+  'KFC Ashaiman', 'Adom Joy Fast Foods', 'Papa\'s Pizza', 'Lets Eat Good',
+  'KFC Melcom', 'Mayday Shawarma & Bites', 'Akua Poly', 'KFC Tema',
+  'IceMan Pub & Restaurant', 'LawBest Cuisine', 'Sister Afia Angwamo',
+  'Shapii Shawarma', 'Berny Joy | Daavi', 'KFC Kwashieman', 'Hajia Saida Waakye',
+  'KFC EL Boundary', 'Frank Test Restaurant', 'Central Market Gobe',
+  'Kubekrom Restaurant Test', 'Maranatha Fast Foods', 'Sweet Bite Foods',
+  'Kate Corner', 'Rahko School Joint', 'Dont Mind Your Wife', 'Maa Afia\'s Pork Cafe',
+  'Santa Rose Restaurant', 'Chef Rudy\'s Kitchen', 'KFC - Bekwai', 'KFC Kwabenya',
+  'KFC Ablekuma', 'Hoxton Food Court (Apatakesi)', 'KFC Kubekrom', 'Bels Kitchen',
+  'Hanch Community 4', 'Cookhaus', 'KFC Takoradi', 'Jollof King',
+  'Taste and See - Test', 'Roliz Pizza', 'Keren\'s Test Restaurant', 'DVLA Waakye',
+  'Chapel Hill Beans', 'Kofan', 'Express Food Joint | GRA Waakye', 'Marwako Fast Food',
+  'Deep Dish Waakye', 'Sweet Mummy\'s Yummy', 'Home Made Special', 'Ataa Maame',
+  'Vodafone Waakye', 'De Stir Catering Services', 'Bread Boutique', '808 Bistro',
+  'Sek Tasty Bite & Ganis Pizza', 'Adani Waakye', 'Latifa Waakye', 'Gobe Gucci',
+  'Sweet Mother Waakye', 'X5 Plus', 'Bar Naas', 'Nogora Junction  Indomie & Food Bay',
+  'Ayisha Food Joint (Aisha)', 'Mr. Robert Fries', 'Adenta Kenkey House',
+  'Muni Diehuo', 'Daavi\'s Special Gobe', 'Bar Naas Pizza', 'Circle Spot Tuo Zaafi',
+  'Maa Regi\'s Restaurant', 'Ginnette Foods', 'Linda Dor Restaurant',
+  'A.D Motors Jollof (Makafui\'s Inn)', 'Bode Gob3', 'Efie Nkwan Specials',
+  'Asew Pa Ye Restaurant', 'Bantama Market Gob3', 'The Joint Cafe | Summerlight',
+  'Mr. Awal\'s Waakye', 'The Dish', 'Lizz Kitchen', 'Queens Hall Gobe',
+  'Odo Rice | Feel Free Restaurant', 'Mr Brown\'s Kitchen', 'Ceci\'s Eating Place',
+  'KFC Circle', 'Shawarma King', 'KFC 37 Liberation', 'Original Alhassan Indomie',
+  'Chez Lee', 'Prison\'s Canteen Waakye', 'KFC EL Lagos Avenue', 'Macmon Special Foods',
+  'Estate Kitchen', 'Fatawu Bicycle', 'Nana\'s Kitchen', 'Special Waakye Boutique',
+  'Seaman Kenkey', 'James Fast Food', 'Adams Kitchen', 'Melcom - Baatsona',
+  'Barima Waakye Special Joint', 'Rockz Waakye', 'Aunte Suzzie\'s Indomie',
+  'Pizza Hut', 'Bar Naas Shawarma', 'Becca Beans', 'KFC EL Hills', 'Koko Porks',
+  'F n J Kitchen', 'De Shallot Eatery | Nhyoni Roundabout', 'Abena Special',
+  'Asew Special Koko', 'KFC KNUST', 'Super-Mc Restaurant', '10 Minutes Kitchen',
+  'Insha Allah Food Joint', 'Waakye Teq', 'Achekke Chez Vivian', 'Shawarma Boiz',
+  'Degree Catering Services', 'Mama Lad Special Rice', 'Adford Pub & Restaurant',
+  'Juli Beans (Aunty Monica-18 Junction Beans)', 'KFC Bekwai', 'Daavi Special Gobe',
+  'KFC Cape Coast', 'Laud K Pharmacy', 'Nuamah\'s Cafe', 'Aduane Restaurant - Test',
+  'PhiloBite Noodles', 'Amina\'s Tuo Zaafi', 'KFC Koforidua', 'Akos Special Angwamoo',
+  'Derbi\'s Special Noodles', 'Jos Bakery', 'Ben\'s Pizza', 'Emma Locals',
+  'The Joint Cafe', 'Broni\'s Kitchen', 'Dreamers Kenkey Restaurant', 'Doree Catering',
+  'Topzy Foods', 'Rahko Kenkey', 'Makeeda Kitchen', 'Zack\'s Big Bite Fast Food & Restaurant',
+  'Asantewaa Chop Bar', 'Focus Street Kitchen', 'My Hot Chicken', 'Aboude Fast Food',
+  'Ruhdan Catering', 'Kobjoe Pharmacy', 'Joe De Jonny Restaurant', 'Downtown Canteen',
+  '5:30 Special Foods', 'Efie ne Fie Aduane', 'Takyiwa\'s Kitchen', 'Daavi Ama Chop Bar',
+  'KFC Dodowa Road', 'Melcom Plus - Kaneshie', 'Nite Fast Food', 'Street Bites',
+  'Ibiza Foods', 'Lebene Kitchen (Pigfarm)', 'Chop Better Fast Food', 'Lovecare Foods',
+  'Dzigbordi Home Cooking', 'Holy Mary Fast Food', 'Mbrodzem Chop Bar', 'Nite Nite',
+  'Papaye Fast Food - Awudome', 'Ruby\'s Spicy', 'Adiz Special Food', 'Sunkwa Fast Food',
+  'Hannah\'s Special Foods (Ecobank Traffic Beans)', 'Melcom - Boundary Road',
+  'Ampesi Boutique & Local Foods Hub', 'Lynda\'s Delight', 'Pizza Inn',
+  'John Barnes Beans |Gobe City', 'Daavi\'s Special Beans (Gobɛ)', 'Kersting\'s Pizza \'N\' More',
+  'GNAT Restaurant', 'Gadef Restaurant', 'Adiza Waakye Special (Hadizah Baatsonaa Total)',
+  'Awurade Kasa Kenkey Joint', 'Columbia Waakye', 'Dine With Sarry', 'Sweet Apple Beans',
+  'Aba Yaa Special', 'Becky Gob3', 'Linswrap Catering Services', 'OJ\'s Kitchen',
+  'Auntie Mary Special Indomie', 'Lokors Tuo Zaafi', 'Mpeabo Nkoaa (Boys Boys Fast Food)',
+  'KFC Manet Junction', 'Luke City', 'Bubbles Pub And Grill', 'Del-Trish Food Haven',
+  'HJ Indomie & Spaghetti Special', 'Junction Mall', 'Micky Lan\'s Kitchen',
+  'Derricks Indomie', 'Mini Gobe Gate', 'Daavi Gobe', 'Super - Mc Restaurant',
+  'Fausty\'s Pub'
+];
 
 function generatePhoneNumber(): string {
   const prefixes = ['024', '054', '055', '026', '027'];
@@ -87,7 +146,7 @@ export function generateRestaurants(): Restaurant[] {
     
     restaurants.push({
       id: `rest_${i + 1}`,
-      name: generateRandomName(),
+      name: realRetailerNames[i] || `Restaurant ${i + 1}`,
       zone: ghanaZones[Math.floor(Math.random() * ghanaZones.length)],
       contact: generatePhoneNumber(),
       location: ghanaLocations[Math.floor(Math.random() * ghanaLocations.length)],
@@ -151,12 +210,16 @@ export function generatePredictions(restaurants: Restaurant[]): PredictionData[]
   const dateStr = tomorrow.toISOString().split('T')[0];
   
   return restaurants.map(restaurant => {
-    const variance = 0.15; // 15% variance
-    const predicted = restaurant.avgDailyOrders * (0.9 + Math.random() * 0.2);
+    const variance = 0.25; // 25% variance to create more interesting predictions
+    const predicted = restaurant.avgDailyOrders * (0.7 + Math.random() * 0.6); // More variation
     const confidence = variance * predicted;
     
     const expectedRevenue = predicted * (restaurant.avgRevenue / restaurant.avgDailyOrders) * (1 - restaurant.cancellationRate);
     const potentialRevenue = predicted * (restaurant.avgRevenue / restaurant.avgDailyOrders);
+    
+    // Calculate variances
+    const orderVariance = predicted - restaurant.avgDailyOrders;
+    const revenueVariance = expectedRevenue - restaurant.avgRevenue;
     
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
     if (restaurant.cancellationRate > 0.2) riskLevel = 'high';
@@ -172,7 +235,9 @@ export function generatePredictions(restaurants: Restaurant[]): PredictionData[]
         lower: Math.round(predicted - confidence),
         upper: Math.round(predicted + confidence)
       },
-      riskLevel
+      riskLevel,
+      orderVariance: Math.round(orderVariance),
+      revenueVariance: Math.round(revenueVariance)
     };
   });
 }

@@ -14,7 +14,7 @@ import { useRealTimeData } from "@/hooks/useRealTimeData";
 
 const Index = () => {
   const { data, lastUpdated, isRefreshing, refreshData } = useRealTimeData();
-  const [selectedRestaurants, setSelectedRestaurants] = useState<Set<string>>(new Set());
+  const [validatedRestaurants, setValidatedRestaurants] = useState<Set<string>>(new Set());
 
   const { restaurants, historicalData, predictions } = data;
 
@@ -23,6 +23,10 @@ const Index = () => {
   const totalExpectedRevenue = predictions.reduce((sum, p) => sum + p.expectedRevenue, 0);
   const totalPotentialRevenue = predictions.reduce((sum, p) => sum + p.potentialRevenue, 0);
   const highRiskCount = predictions.filter(p => p.riskLevel === 'high').length;
+
+  const handleValidatedRestaurantsChange = (validated: Set<string>) => {
+    setValidatedRestaurants(validated);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -36,7 +40,7 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">ML Retailer Analytics</h1>
-                <p className="text-sm text-gray-500">Real-time prediction & SMS deployment dashboard</p>
+                <p className="text-sm text-gray-500">Real-time prediction validation & SMS deployment dashboard</p>
               </div>
             </div>
             
@@ -100,6 +104,7 @@ const Index = () => {
             <ValidationPanel 
               predictions={predictions} 
               restaurants={restaurants}
+              onValidatedRestaurantsChange={handleValidatedRestaurantsChange}
             />
           </TabsContent>
 
@@ -107,7 +112,7 @@ const Index = () => {
             <SMSDeploymentPanel
               predictions={predictions}
               restaurants={restaurants}
-              selectedRestaurants={selectedRestaurants}
+              validatedRestaurants={validatedRestaurants}
             />
           </TabsContent>
         </Tabs>
@@ -115,24 +120,24 @@ const Index = () => {
         {/* Success Metrics Footer */}
         <Card className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
           <CardHeader>
-            <CardTitle className="text-lg text-blue-900">System Performance Metrics</CardTitle>
+            <CardTitle className="text-lg text-blue-900">ML System Performance Metrics</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
-                <div className="text-2xl font-bold text-blue-600">92.3%</div>
-                <div className="text-sm text-blue-700">Prediction Accuracy</div>
+                <div className="text-2xl font-bold text-blue-600">94.7%</div>
+                <div className="text-sm text-blue-700">ML Prediction Accuracy</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-600">98.7%</div>
                 <div className="text-sm text-green-700">SMS Delivery Rate</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-purple-600">76.4%</div>
+                <div className="text-2xl font-bold text-purple-600">82.1%</div>
                 <div className="text-sm text-purple-700">Retailer Response Rate</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-orange-600">23.1%</div>
+                <div className="text-2xl font-bold text-orange-600">28.3%</div>
                 <div className="text-sm text-orange-700">Revenue Recovery</div>
               </div>
             </div>

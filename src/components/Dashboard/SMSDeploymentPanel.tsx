@@ -8,19 +8,23 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { MessageSquare, Send, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { MessageSquare, Send, CheckCircle, AlertCircle, Clock, TrendingUp, TrendingDown } from "lucide-react";
 import { PredictionData, Restaurant } from "@/utils/dummyData";
 import { useToast } from "@/hooks/use-toast";
 
 interface SMSDeploymentPanelProps {
   predictions: PredictionData[];
   restaurants: Restaurant[];
-  selectedRestaurants: Set<string>;
+  validatedRestaurants: Set<string>;
 }
 
-export function SMSDeploymentPanel({ predictions, restaurants, selectedRestaurants }: SMSDeploymentPanelProps) {
+export function SMSDeploymentPanel({ 
+  predictions, 
+  restaurants, 
+  validatedRestaurants 
+}: SMSDeploymentPanelProps) {
   const [smsTemplate, setSmsTemplate] = useState(
-    "Hello, {restaurantName}! You lost GHS {lostRevenue} in sales yesterday. During your peak time around {peakHour}, your {cancelledOrders} orders were canceled due to {stockOutItems} being out of stock. We anticipate at least {predictedOrders} orders today. Please ensure you have enough stock to avoid cancellation and loss of money. Thank you for partnering with Hubtel."
+    "Hello {restaurantName}! Our AI predicts {predictedOrders} orders for today ({variance} vs your avg). {trendMessage} {recommendationMessage} Your estimated revenue: GHS {expectedRevenue}. Prepare accordingly to maximize sales. - Hubtel ML Analytics"
   );
   const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'deploying' | 'completed'>('idle');
   const [deliveryStatus, setDeliveryStatus] = useState<Map<string, 'pending' | 'sent' | 'delivered' | 'failed'>>(new Map());
@@ -30,7 +34,8 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
   const restaurantMap = new Map(restaurants.map(r => [r.id, r]));
   const predictionMap = new Map(predictions.map(p => [p.restaurantId, p]));
 
-  const selectedRestaurantsList = Array.from(selectedRestaurants)
+  // Only show validated restaurants for SMS deployment
+  const eligibleRestaurants = Array.from(validatedRestaurants)
     .map(id => restaurantMap.get(id))
     .filter(Boolean) as Restaurant[];
 
@@ -38,16 +43,24 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
     const prediction = predictionMap.get(restaurant.id);
     if (!prediction) return '';
 
-    const lostRevenue = (prediction.potentialRevenue - prediction.expectedRevenue).toFixed(0);
-    const cancelledOrders = Math.floor(restaurant.avgDailyOrders * restaurant.cancellationRate);
+    const variance = prediction.orderVariance;
+    const isIncrease = variance >= 0;
+    
+    const trendMessage = isIncrease 
+      ? `This is ${Math.abs(variance)} orders more than usual.`
+      : `This is ${Math.abs(variance)} orders less than usual.`;
+    
+    const recommendationMessage = isIncrease
+      ? "Stock up on your popular items to handle the increased demand!"
+      : "Consider promoting special offers to boost orders.";
     
     return smsTemplate
       .replace('{restaurantName}', restaurant.name)
-      .replace('{lostRevenue}', lostRevenue)
-      .replace('{peakHour}', `${restaurant.peakHour}:00`)
-      .replace('{cancelledOrders}', cancelledOrders.toString())
-      .replace('{stockOutItems}', restaurant.topItems.slice(0, 2).join(' and '))
-      .replace('{predictedOrders}', prediction.predictedOrders.toString());
+      .replace('{predictedOrders}', prediction.predictedOrders.toString())
+      .replace('{variance}', `${variance >= 0 ? '+' : ''}${variance}`)
+      .replace('{trendMessage}', trendMessage)
+      .replace('{recommendationMessage}', recommendationMessage)
+      .replace('{expectedRevenue}', prediction.expectedRevenue.toString());
   };
 
   const validateTemplate = () => {
@@ -63,20 +76,20 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
     const newDeliveryStatus = new Map();
     
     // Initialize all as pending
-    selectedRestaurantsList.forEach(restaurant => {
+    eligibleRestaurants.forEach(restaurant => {
       newDeliveryStatus.set(restaurant.id, 'pending');
     });
     setDeliveryStatus(new Map(newDeliveryStatus));
 
     // Simulate deployment process
-    for (let i = 0; i < selectedRestaurantsList.length; i++) {
-      const restaurant = selectedRestaurantsList[i];
+    for (let i = 0; i < eligibleRestaurants.length; i++) {
+      const restaurant = eligibleRestaurants[i];
       
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
       
-      // Simulate success/failure (90% success rate)
-      const success = Math.random() > 0.1;
+      // Simulate success/failure (95% success rate for validated predictions)
+      const success = Math.random() > 0.05;
       newDeliveryStatus.set(restaurant.id, success ? 'sent' : 'failed');
       setDeliveryStatus(new Map(newDeliveryStatus));
       
@@ -92,11 +105,11 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
     setDeploymentStatus('completed');
     
     const successCount = Array.from(newDeliveryStatus.values()).filter(status => status === 'sent' || status === 'delivered').length;
-    const failureCount = selectedRestaurantsList.length - successCount;
+    const failureCount = eligibleRestaurants.length - successCount;
     
     toast({
-      title: "SMS Deployment Complete",
-      description: `${successCount} messages sent successfully, ${failureCount} failed.`,
+      title: "ML Prediction SMS Deployment Complete",
+      description: `${successCount} validated predictions sent successfully, ${failureCount} failed.`,
       duration: 5000,
     });
   };
@@ -138,14 +151,14 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">SMS Deployment</h2>
+        <h2 className="text-2xl font-bold text-gray-900">ML Prediction SMS Deployment</h2>
         <div className="flex gap-2">
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            {selectedRestaurantsList.length} Selected
+            {eligibleRestaurants.length} Validated
           </Badge>
           {deploymentStatus === 'completed' && (
             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              {deliveredCount}/{selectedRestaurantsList.length} Delivered
+              {deliveredCount}/{eligibleRestaurants.length} Delivered
             </Badge>
           )}
         </div>
@@ -156,7 +169,7 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            SMS Template
+            ML Prediction SMS Template
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -168,13 +181,13 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
               onChange={(e) => setSmsTemplate(e.target.value)}
               rows={4}
               className="mt-2"
-              placeholder="Enter your SMS template with variables..."
+              placeholder="Enter your ML prediction SMS template with variables..."
             />
           </div>
           
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Available variables: {'{restaurantName}'}, {'{lostRevenue}'}, {'{peakHour}'}, {'{cancelledOrders}'}, {'{stockOutItems}'}, {'{predictedOrders}'}
+              Available variables: {'{restaurantName}'}, {'{predictedOrders}'}, {'{variance}'}, {'{trendMessage}'}, {'{recommendationMessage}'}, {'{expectedRevenue}'}
             </div>
             {validateTemplate() ? (
               <Badge variant="default" className="bg-green-100 text-green-800">
@@ -191,12 +204,12 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
         </CardContent>
       </Card>
 
-      {/* Selected Restaurants for SMS */}
+      {/* Validated Restaurants for SMS */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Selected Restaurants ({selectedRestaurantsList.length})</CardTitle>
-            {selectedRestaurantsList.length > 0 && (
+            <CardTitle>Validated ML Predictions for SMS ({eligibleRestaurants.length})</CardTitle>
+            {eligibleRestaurants.length > 0 && (
               <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
                 <DialogTrigger asChild>
                   <Button 
@@ -204,21 +217,21 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
                     disabled={!validateTemplate() || deploymentStatus === 'deploying'}
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    Deploy SMS ({selectedRestaurantsList.length})
+                    Deploy SMS ({eligibleRestaurants.length})
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Confirm SMS Deployment</DialogTitle>
+                    <DialogTitle>Confirm ML Prediction SMS Deployment</DialogTitle>
                     <DialogDescription>
-                      You are about to send SMS messages to {selectedRestaurantsList.length} restaurants. 
+                      You are about to send ML prediction-based SMS messages to {eligibleRestaurants.length} validated restaurants. 
                       This action cannot be undone.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4">
                     <h4 className="font-medium mb-2">Message Preview:</h4>
                     <div className="bg-gray-50 p-3 rounded border text-sm">
-                      {selectedRestaurantsList.length > 0 && generatePersonalizedSMS(selectedRestaurantsList[0])}
+                      {eligibleRestaurants.length > 0 && generatePersonalizedSMS(eligibleRestaurants[0])}
                     </div>
                   </div>
                   <DialogFooter>
@@ -235,11 +248,11 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
           </div>
         </CardHeader>
         <CardContent>
-          {selectedRestaurantsList.length === 0 ? (
+          {eligibleRestaurants.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">No restaurants selected</p>
-              <p className="text-sm">Select restaurants from the Validation Panel to send SMS alerts</p>
+              <p className="text-lg font-medium">No validated predictions for SMS</p>
+              <p className="text-sm">Validate ML predictions in the Validation Panel to enable SMS deployment</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -247,9 +260,9 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                    <span className="font-medium text-blue-800">Deploying SMS messages...</span>
+                    <span className="font-medium text-blue-800">Deploying ML prediction SMS messages...</span>
                   </div>
-                  <Progress value={(sentCount + failedCount) / selectedRestaurantsList.length * 100} className="mt-2" />
+                  <Progress value={(sentCount + failedCount) / eligibleRestaurants.length * 100} className="mt-2" />
                 </div>
               )}
               
@@ -257,7 +270,7 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-green-800">SMS Deployment Complete</span>
+                    <span className="font-medium text-green-800">ML Prediction SMS Deployment Complete</span>
                   </div>
                   <div className="text-sm text-green-700">
                     {deliveredCount} delivered, {sentCount - deliveredCount} sent, {failedCount} failed
@@ -266,7 +279,7 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
               )}
               
               <div className="space-y-3">
-                {selectedRestaurantsList.map((restaurant) => {
+                {eligibleRestaurants.map((restaurant) => {
                   const prediction = predictionMap.get(restaurant.id);
                   const personalizedMessage = generatePersonalizedSMS(restaurant);
                   const status = deliveryStatus.get(restaurant.id);
@@ -284,10 +297,28 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
                         </div>
                       </div>
                       
+                      {prediction && (
+                        <div className="mb-3 flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            {prediction.orderVariance >= 0 ? (
+                              <TrendingUp className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <TrendingDown className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className={prediction.orderVariance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                              {prediction.orderVariance >= 0 ? '+' : ''}{prediction.orderVariance} orders
+                            </span>
+                          </div>
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                            ML Validated
+                          </Badge>
+                        </div>
+                      )}
+                      
                       <Separator className="my-3" />
                       
                       <div>
-                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Message Preview</Label>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">ML Prediction Message</Label>
                         <p className="text-sm mt-1 bg-gray-50 p-2 rounded border">
                           {personalizedMessage}
                         </p>
@@ -295,9 +326,9 @@ export function SMSDeploymentPanel({ predictions, restaurants, selectedRestauran
                       
                       {prediction && (
                         <div className="mt-3 flex gap-4 text-xs text-gray-500">
-                          <span>Predicted Orders: {prediction.predictedOrders}</span>
+                          <span>Predicted: {prediction.predictedOrders} orders</span>
+                          <span>Historical: {restaurant.avgDailyOrders} orders</span>
                           <span>Expected Revenue: GHS {prediction.expectedRevenue}</span>
-                          <span>Risk Level: {prediction.riskLevel}</span>
                         </div>
                       )}
                     </div>
