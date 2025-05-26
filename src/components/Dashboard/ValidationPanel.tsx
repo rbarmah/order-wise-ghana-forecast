@@ -31,16 +31,20 @@ export function ValidationPanel({
   const restaurantMap = new Map(restaurants.map(r => [r.id, r]));
 
   // Filter predictions that exceed thresholds (these are considered unusual)
-  const unusualPredictions = predictions.filter(p => 
-    Math.abs(Number(p.orderVariance) || 0) > orderVarianceThreshold[0] || 
-    Math.abs(Number(p.revenueVariance) || 0) > revenueVarianceThreshold[0]
-  );
+  const unusualPredictions = predictions.filter(p => {
+    const orderVar = Number(p.orderVariance) || 0;
+    const revenueVar = Number(p.revenueVariance) || 0;
+    return Math.abs(orderVar) > orderVarianceThreshold[0] || 
+           Math.abs(revenueVar) > revenueVarianceThreshold[0];
+  });
 
   // Normal predictions (within thresholds) should be automatically validated
-  const normalPredictions = predictions.filter(p => 
-    Math.abs(Number(p.orderVariance) || 0) <= orderVarianceThreshold[0] && 
-    Math.abs(Number(p.revenueVariance) || 0) <= revenueVarianceThreshold[0]
-  );
+  const normalPredictions = predictions.filter(p => {
+    const orderVar = Number(p.orderVariance) || 0;
+    const revenueVar = Number(p.revenueVariance) || 0;
+    return Math.abs(orderVar) <= orderVarianceThreshold[0] && 
+           Math.abs(revenueVar) <= revenueVarianceThreshold[0];
+  });
 
   // Update validated restaurants whenever thresholds change
   useEffect(() => {
@@ -181,7 +185,7 @@ export function ValidationPanel({
       {/* Prediction Variance Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>ML Prediction Variance Analysis</CardTitle>
+          <CardTitle></CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
