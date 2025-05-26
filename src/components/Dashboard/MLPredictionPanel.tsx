@@ -154,7 +154,7 @@ export function MLPredictionPanel({ predictions, restaurants }: MLPredictionPane
 
                   <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
                     <Clock className="h-3 w-3" />
-                    <span>Peak: {prediction.peakHour}</span>
+                    <span>Peak: {restaurant.peakHour}:00</span>
                     <span>•</span>
                     <Phone className="h-3 w-3" />
                     <span>{restaurant.contact}</span>
