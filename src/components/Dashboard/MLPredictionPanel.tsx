@@ -1,10 +1,30 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, Target, DollarSign, MapPin, Phone, Clock, Filter } from "lucide-react";
-import { PredictionData, Restaurant } from "@/utils/dummyData";
 import { useState } from "react";
+
+// Define types locally to avoid import issues
+interface PredictionData {
+  restaurantId: string;
+  riskLevel: 'high' | 'medium' | 'low';
+  expectedRevenue: number;
+  potentialRevenue: number;
+  predictedOrders: number;
+  confidenceInterval: {
+    lower: number;
+    upper: number;
+  };
+}
+
+interface Restaurant {
+  id: string;
+  name: string;
+  zone: string;
+  avgDailyOrders: number;
+  peakHour: number;
+  contact: string;
+}
 
 interface MLPredictionPanelProps {
   predictions: PredictionData[];
@@ -100,9 +120,9 @@ export function MLPredictionPanel({ predictions, restaurants }: MLPredictionPane
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              <SelectItem value="low">< GHS 500</SelectItem>
+              <SelectItem value="low">&lt; GHS 500</SelectItem>
               <SelectItem value="medium">GHS 500-1000</SelectItem>
-              <SelectItem value="high">> GHS 1000</SelectItem>
+              <SelectItem value="high">&gt; GHS 1000</SelectItem>
             </SelectContent>
           </Select>
         </div>
