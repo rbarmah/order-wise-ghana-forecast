@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertTriangle, CheckCircle, Search, Filter } from "lucide-react";
+import { CheckCircle, Search, Filter } from "lucide-react";
 import { PredictionData, Restaurant } from "@/utils/dummyData";
 
 interface ValidationPanelProps {
@@ -59,21 +58,6 @@ export function ValidationPanel({
     if (!restaurant) return false;
     return restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
            restaurant.zone.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-
-  // Variance comparison data for chart
-  const varianceData = predictions.slice(0, 20).map(p => {
-    const restaurant = restaurantMap.get(p.restaurantId);
-    const orderVar = Number(p.orderVariance) || 0;
-    const revenueVar = Number(p.revenueVariance) || 0;
-    
-    return {
-      name: restaurant?.name.split(' ')[0] || 'Unknown',
-      orderVariance: orderVar,
-      revenueVariance: revenueVar / 10, // Scale down for better visualization
-      isUnusual: Math.abs(orderVar) > orderVarianceThreshold[0] || 
-                Math.abs(revenueVar) > revenueVarianceThreshold[0]
-    };
   });
 
   const toggleRestaurantValidation = (restaurantId: string) => {
@@ -179,33 +163,6 @@ export function ValidationPanel({
               Unusual predictions (beyond thresholds) require manual validation to prevent sending questionable ML predictions to retailers.
             </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Prediction Variance Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle></CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={varianceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value, name) => [
-                  name === 'orderVariance' ? `${value} orders` : `GHS ${Number(value) * 10}`,
-                  name === 'orderVariance' ? 'Order Variance' : 'Revenue Variance (÷10)'
-                ]}
-              />
-              <Bar dataKey="orderVariance" fill="#3b82f6" name="Order Variance" />
-              <Bar dataKey="revenueVariance" fill="#10b981" name="Revenue Variance (÷10)" />
-            </BarChart>
-          </ResponsiveContainer>
-          <p className="text-sm text-gray-500 mt-2">
-            Shows prediction variance from historical averages. Positive values indicate higher predictions, negative values indicate lower predictions.
-          </p>
         </CardContent>
       </Card>
 

@@ -18,12 +18,6 @@ const Index = () => {
 
   const { restaurants, historicalData, predictions } = data;
 
-  // Calculate overview metrics
-  const totalPredictedOrders = predictions.reduce((sum, p) => sum + p.predictedOrders, 0);
-  const totalExpectedRevenue = predictions.reduce((sum, p) => sum + p.expectedRevenue, 0);
-  const totalPotentialRevenue = predictions.reduce((sum, p) => sum + p.potentialRevenue, 0);
-  const highRiskCount = predictions.filter(p => p.riskLevel === 'high').length;
-
   const handleValidatedRestaurantsChange = (validated: Set<string>) => {
     setValidatedRestaurants(validated);
   };
@@ -70,14 +64,7 @@ const Index = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Overview Metrics */}
-        <MetricsOverview
-          totalRestaurants={restaurants.length}
-          totalPredictedOrders={totalPredictedOrders}
-          totalExpectedRevenue={totalExpectedRevenue}
-          totalPotentialRevenue={totalPotentialRevenue}
-          highRiskCount={highRiskCount}
-          lastUpdated={lastUpdated}
-        />
+        <MetricsOverview lastUpdated={lastUpdated} />
 
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="predictions" className="space-y-6">
@@ -123,18 +110,10 @@ const Index = () => {
             <CardTitle className="text-lg text-blue-900">ML System Performance Metrics</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
               <div>
                 <div className="text-2xl font-bold text-blue-600">94.7%</div>
                 <div className="text-sm text-blue-700">ML Prediction Accuracy</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600">98.7%</div>
-                <div className="text-sm text-green-700">SMS Delivery Rate</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-600">82.1%</div>
-                <div className="text-sm text-purple-700">Retailer Response Rate</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-orange-600">28.3%</div>

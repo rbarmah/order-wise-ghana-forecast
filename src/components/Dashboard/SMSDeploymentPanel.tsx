@@ -24,7 +24,7 @@ export function SMSDeploymentPanel({
   validatedRestaurants 
 }: SMSDeploymentPanelProps) {
   const [smsTemplate, setSmsTemplate] = useState(
-    "Hello {restaurantName}! Our AI predicts {predictedOrders} orders for today ({variance} vs your avg). {trendMessage} {recommendationMessage} Your estimated revenue: GHS {expectedRevenue}. Prepare accordingly to maximize sales. - Hubtel ML Analytics"
+    "Hello {restaurantName}! Our data shows GHS {previousRevenueLoss} was lost yesterday due to order cancellations. Our AI predicts {predictedOrders} orders for today ({variance} vs your avg). {trendMessage} {recommendationMessage} Your estimated revenue: GHS {expectedRevenue}. Prepare accordingly to maximize sales. - Hubtel ML Analytics"
   );
   const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'deploying' | 'completed'>('idle');
   const [deliveryStatus, setDeliveryStatus] = useState<Map<string, 'pending' | 'sent' | 'delivered' | 'failed'>>(new Map());
@@ -46,6 +46,11 @@ export function SMSDeploymentPanel({
     const variance = prediction.orderVariance;
     const isIncrease = variance >= 0;
     
+    // Calculate previous revenue loss (simulated based on average order value and cancellation rate)
+    const avgOrderValue = Math.round(prediction.expectedRevenue / prediction.predictedOrders);
+    const estimatedCancellations = Math.max(1, Math.floor(restaurant.avgDailyOrders * 0.15)); // 15% cancellation rate
+    const previousRevenueLoss = estimatedCancellations * avgOrderValue;
+    
     const trendMessage = isIncrease 
       ? `This is ${Math.abs(variance)} orders more than usual.`
       : `This is ${Math.abs(variance)} orders less than usual.`;
@@ -56,6 +61,7 @@ export function SMSDeploymentPanel({
     
     return smsTemplate
       .replace('{restaurantName}', restaurant.name)
+      .replace('{previousRevenueLoss}', previousRevenueLoss.toString())
       .replace('{predictedOrders}', prediction.predictedOrders.toString())
       .replace('{variance}', `${variance >= 0 ? '+' : ''}${variance}`)
       .replace('{trendMessage}', trendMessage)
@@ -64,7 +70,7 @@ export function SMSDeploymentPanel({
   };
 
   const validateTemplate = () => {
-    const requiredVariables = ['{restaurantName}', '{predictedOrders}'];
+    const requiredVariables = ['{restaurantName}', '{predictedOrders}', '{previousRevenueLoss}'];
     const missingVariables = requiredVariables.filter(variable => !smsTemplate.includes(variable));
     return missingVariables.length === 0;
   };
@@ -187,7 +193,7 @@ export function SMSDeploymentPanel({
           
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Available variables: {'{restaurantName}'}, {'{predictedOrders}'}, {'{variance}'}, {'{trendMessage}'}, {'{recommendationMessage}'}, {'{expectedRevenue}'}
+              Available variables: {'{restaurantName}'}, {'{previousRevenueLoss}'}, {'{predictedOrders}'}, {'{variance}'}, {'{trendMessage}'}, {'{recommendationMessage}'}, {'{expectedRevenue}'}
             </div>
             {validateTemplate() ? (
               <Badge variant="default" className="bg-green-100 text-green-800">

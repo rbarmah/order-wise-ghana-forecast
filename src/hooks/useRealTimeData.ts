@@ -29,9 +29,9 @@ export function useRealTimeData() {
     setIsRefreshing(false);
   }, []);
 
-  // Auto-refresh every 5 minutes
+  // Auto-refresh every 24 hours
   useEffect(() => {
-    const interval = setInterval(refreshData, 5 * 60 * 1000);
+    const interval = setInterval(refreshData, 24 * 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, [refreshData]);
 
